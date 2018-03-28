@@ -112,6 +112,17 @@ while (($# > 0)); do
       verbosity=$2
       shift 2
       ;;
+    # Repo API: Use a forced SDK directory from source-build
+    -dotnetcoresdkdir)
+      dotnetcoresdkdir=$2
+      export DOTNET_INSTALL_DIR=$dotnetcoresdkdir
+      shift 2
+      ;;
+    # Repo API: Perform a minimal build if true
+    -dotnetbuildfromsource)
+      dotnetbuildfromsource=$2
+      shift 2
+      ;;
     *)
       properties="$properties $1"
       shift 1
@@ -148,47 +159,51 @@ function InstallDotNetCli {
   fi
 
   local dotnetroot="$DOTNET_INSTALL_DIR"
-  local dotnetinstallscript="$dotnetroot/dotnet-install.sh"
 
-  if [[ ! -a "$dotnetinstallscript" ]]; then
-    mkdir -p "$dotnetroot"
+  ## Only download/run the install script if DotNetCoreSdkDir wasn't passed
+  if [ -z "$dotnetcoresdkdir" ]; then
+    local dotnetinstallscript="$dotnetroot/dotnet-install.sh"
 
-    # Use curl if available, otherwise use wget
-    if command -v curl > /dev/null; then
-      curl "https://dot.net/v1/dotnet-install.sh" -sSL --retry 10 --create-dirs -o "$dotnetinstallscript"
-    else
-      wget -q -O "$dotnetinstallscript" "https://dot.net/v1/dotnet-install.sh"
+    if [[ ! -a "$dotnetinstallscript" ]]; then
+      mkdir -p "$dotnetroot"
+
+      # Use curl if available, otherwise use wget
+      if command -v curl > /dev/null; then
+        curl "https://dot.net/v1/dotnet-install.sh" -sSL --retry 10 --create-dirs -o "$dotnetinstallscript"
+      else
+        wget -q -O "$dotnetinstallscript" "https://dot.net/v1/dotnet-install.sh"
+      fi
     fi
-  fi
 
-  if [[ "$(echo $verbosity | awk '{print tolower($0)}')" == 'diagnostic' ]]; then
-    dotnetinstallverbosity="--verbose"
-  fi
-
-  # Install a stage 0
-  local sdkinstalldir="$dotnetroot/sdk/$dotnetcliversion"
-
-  if [[ ! -d "$sdkinstalldir" ]]; then
-    bash "$dotnetinstallscript" --version $dotnetcliversion $dotnetinstallverbosity
-    local lastexitcode=$?
-
-    if [[ $lastexitcode != 0 ]]; then
-      echo "Failed to install stage0"
-      ExitWithExitCode $lastexitcode
+    if [[ "$(echo $verbosity | awk '{print tolower($0)}')" == 'diagnostic' ]]; then
+      dotnetinstallverbosity="--verbose"
     fi
-  fi
 
-  # Install 1.0 shared framework
-  local netcoreappversion='1.0.5'
-  local netcoreapp10dir="$dotnetroot/shared/Microsoft.NETCore.App/$netcoreappversion"
+    # Install a stage 0
+    local sdkinstalldir="$dotnetroot/sdk/$dotnetcliversion"
 
-  if [[ ! -d "$netcoreapp10dir" ]]; then
-    bash "$dotnetinstallscript" --channel "Preview" --version $netcoreappversion --shared-runtime $dotnetinstallverbosity
-    lastexitcode=$?
+    if [[ ! -d "$sdkinstalldir" ]]; then
+      bash "$dotnetinstallscript" --version $dotnetcliversion $dotnetinstallverbosity
+      local lastexitcode=$?
 
-    if [[ $lastexitcode != 0 ]]; then
-      echo "Failed to install 1.0 shared framework"
-      ExitWithExitCode $lastexitcode
+      if [[ $lastexitcode != 0 ]]; then
+        echo "Failed to install stage0"
+        ExitWithExitCode $lastexitcode
+      fi
+    fi
+
+    # Install 1.0 shared framework
+    local netcoreappversion='1.0.5'
+    local netcoreapp10dir="$dotnetroot/shared/Microsoft.NETCore.App/$netcoreappversion"
+
+    if [[ ! -d "$netcoreapp10dir" ]]; then
+      bash "$dotnetinstallscript" --channel "Preview" --version $netcoreappversion --shared-runtime $dotnetinstallverbosity
+      lastexitcode=$?
+
+      if [[ $lastexitcode != 0 ]]; then
+        echo "Failed to install 1.0 shared framework"
+        ExitWithExitCode $lastexitcode
+      fi
     fi
   fi
 
@@ -262,6 +277,10 @@ function Build {
 
   if [[ -z $solution ]]; then
     solution="$reporoot/*.sln"
+  fi
+
+  if [[ "$dotnetbuildfromsource" == true ]]; then
+    solution="$reporoot/src/source/CommandLine/Microsoft.DotNet.Cli.CommandLine.csproj"
   fi
 
   dotnet msbuild $toolsetbuildproj /m /nologo /clp:Summary /warnaserror \
