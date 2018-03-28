@@ -12,14 +12,10 @@
     <PublishOutputToSymStore>false</PublishOutputToSymStore>
   </PropertyGroup>
 
-  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
-
   <ItemGroup>
     <ProjectReference Include="..\..\source\CommandLine\Microsoft.DotNet.Cli.CommandLine.csproj" />
     <ProjectReference Include="..\SampleParsers\CommandLine.SampleParsers.csproj" />
   </ItemGroup>
-
-  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 
 </Project>
 
