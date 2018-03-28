@@ -3,7 +3,7 @@
 <Project>
 
   <PropertyGroup>
-    <RestoreSources>https://dotnetfeed.blob.core.windows.net/dotnet-core/packages/index.json</RestoreSources>
+    <RestoreSources>https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json</RestoreSources>
   </PropertyGroup>
 
   <PropertyGroup>
