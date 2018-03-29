@@ -2,7 +2,7 @@
 <!-- Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the MIT license. See License.txt in the project root for full license information. -->
 <Project>
 
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(DotNetBuildOffline)' != 'true'">
     <RestoreSources>https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json</RestoreSources>
   </PropertyGroup>
 
